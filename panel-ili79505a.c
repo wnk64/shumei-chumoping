@@ -31,7 +31,7 @@ static inline struct ili79505a_panel *to_ili79505a(struct drm_panel *panel)
 static int ili79505a_prepare(struct drm_panel *panel)
 {
     struct ili79505a_panel *ctx = to_ili79505a(panel);
-    int ret;
+    int ret, attempt;
 
     if (ctx->prepared)
         return 0;
@@ -51,11 +51,23 @@ static int ili79505a_prepare(struct drm_panel *panel)
     /* P02 is owned by the Ilitek driver; reset touch after LCD reset and
      * before sending any I2C DDI packets. This also covers warm reboots.
      */
-    ret = ili79505a_panel_reset_touch();
+    /* Module dependency only guarantees that Ilitek was loaded; on a cold
+     * boot its I2C probe may still be running. Keep bias up while waiting
+     * for touch firmware initialization before resetting the shared TDDI.
+     */
+    for (attempt = 0; attempt < 250; attempt++) {
+        ret = ili79505a_panel_reset_touch();
+        if (ret != -ENODEV)
+            break;
+        msleep(20);
+    }
     if (ret) {
         dev_err(panel->dev, "ILI79505A touch reset failed: %d\n", ret);
         goto reset_failed;
     }
+    if (attempt)
+        dev_info(panel->dev, "waited %d ms for touch I2C probe\n",
+                 attempt * 20);
 
     /* No DSI commands: all TEST register packets go through Ilitek I2C. */
     ret = ili79505a_panel_run_test_sequence();
@@ -217,4 +229,5 @@ module_mipi_dsi_driver(ili79505a_driver);
 
 MODULE_SOFTDEP("pre: ilitek_v3_driver");
 MODULE_DESCRIPTION("ILI79505A TDDI panel with I2C-only DDI initialization");
+MODULE_VERSION("1.0.1");
 MODULE_LICENSE("GPL");

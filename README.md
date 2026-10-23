@@ -2,6 +2,8 @@
 
 这是基于原项目独立整理的 ILI79505A/TDDI 分支；原 BOE BV050FWM + GT911 方案保留在 `master`，不要用 `master` 的安装脚本安装本屏。
 
+当前驱动版本：**1.0.1**，标签 `ili79505a-v1.0.1`。本版修复冷启动时触摸 I²C probe 尚未完成而面板提前复位导致的黑屏；仅在未就绪时有限重试，不增加固定开机等待。详细变更见 [更新日志](CHANGELOG.md)。本分支发布仅维护屏幕/触摸驱动及其安装加载配置，不包含启动壁纸或无线模块测试工具。
+
 在 Raspberry Pi 4B、64 位 Raspberry Pi OS、内核 `6.18.34+rpt-rpi-v8` 实测：清理已安装的旧驱动后，在板上重新编译、安装、重启，用户确认显示与触摸均正常。其他内核需有与当前运行内核完全匹配的 headers，并自行验证兼容性。
 
 ## 接口与工作方式
@@ -36,6 +38,7 @@ sudo reboot
 
 ```bash
 lsmod | grep -E 'ilitek_v3_driver|panel_ili79505a'
+modinfo -F version panel_ili79505a               # 1.0.1
 cat /sys/module/ilitek_v3_driver/parameters/polling  # Y
 cat /sys/class/drm/card*-DSI-1/status             # connected
 cat /sys/class/drm/card*-DSI-1/modes              # 720x1280
